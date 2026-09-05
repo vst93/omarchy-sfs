@@ -69,6 +69,7 @@ BarWidget {
     add("/home/linuxbrew/.linuxbrew/bin/sfs")                       // homebrew (Linux)
     add(home + "/.linuxbrew/bin/sfs")                               // homebrew (macOS, homedir)
     add("/usr/local/bin/sfs")
+    add("/usr/bin/sfs")                                             // pacman/AUR install
     add("/opt/homebrew/bin/sfs")                                    // homebrew (macOS, arm)
     return list
   }
