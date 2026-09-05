@@ -12,6 +12,54 @@ function shellQuote(s) {
     return "'" + String(s).replace(/'/g, "'\\''") + "'"
 }
 
+// Build the /bin/sh script that finds the sfs binary wherever it lives.
+// Order: explicit sfsPath setting → "sfs" on $PATH → known install
+// directories → every directory on $PATH → bounded $HOME search (pruned, so
+// it stays fast). Prints the first absolute path found, exit 1 otherwise.
+// Never executes the binary — only stat() calls.
+function locateScript(sfsBin, home) {
+    var q = shellQuote
+    var s = ""
+
+    // 1) The user's setting: bare name resolves via $PATH, any path with a
+    //    slash is tested directly. Missing/stale values fall through.
+    if (sfsBin !== "") {
+        s += "case " + q(sfsBin) + " in */*) [ -x " + q(sfsBin) + " ] && { echo " + q(sfsBin) + "; exit 0; } ;; "
+        s += "*) p=$(command -v " + q(sfsBin) + " 2>/dev/null) && [ -n \"$p\" ] && { echo \"$p\"; exit 0; } ;; esac; "
+    }
+
+    // 2) Plain "sfs" on whatever PATH this shell sees.
+    s += "p=$(command -v sfs 2>/dev/null) && [ -n \"$p\" ] && { echo \"$p\"; exit 0; }; "
+
+    // 3) Known install locations (package managers, no-sudo script, brew,
+    //    Termux — mirrors sfs install.sh's own choices).
+    var dirs = [
+        home + "/.local/bin",
+        home + "/bin",
+        "/usr/local/bin",
+        "/usr/bin",
+        "/opt/sfs/bin",
+        "/snap/bin",
+        "/home/linuxbrew/.linuxbrew/bin",
+        home + "/.linuxbrew/bin",
+        "/opt/homebrew/bin",
+        "/data/data/com.termux/files/usr/bin"
+    ]
+    s += "for d in " + dirs.map(q).join(" ") + "; do [ -x \"$d/sfs\" ] && { echo \"$d/sfs\"; exit 0; }; done; "
+
+    // 4) Every directory already on PATH (covers distro-specific bin dirs).
+    s += "oIFS=$IFS; IFS=:; for d in $PATH; do IFS=$oIFS; [ -n \"$d\" ] && [ -x \"$d/sfs\" ] && { echo \"$d/sfs\"; exit 0; }; done; IFS=$oIFS; "
+
+    // 5) Last resort: bounded depth-3 search of $HOME, pruning directories
+    //    that are big and never hold a binary. Metadata-only walk.
+    s += "find " + q(home) + " -maxdepth 3 -xdev "
+    s += "\\( -type d \\( -name .cache -o -name node_modules -o -name .git -o -name .npm -o -name vendor -o -name dist -o -name build \\) -prune \\) -o "
+    s += "-type f -name sfs -perm -u+x -print 2>/dev/null | head -n 1; "
+
+    s += "exit 1"
+    return s
+}
+
 // Probe a list of ports for an already-listening SFS server. Prints
 // "reuse <port>" for the first port that answers /api/info, "spawn" otherwise.
 // Only stdout is parsed; curl noise goes to stderr and is discarded.

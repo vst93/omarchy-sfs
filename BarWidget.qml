@@ -57,22 +57,11 @@ BarWidget {
     return false
   }
 
-  // ---- Candidate binaries (in probe order) -----------------------------------
-  // $HOME must be resolved at runtime — QML has no tilde expansion.
+  // ---- Candidate binaries -----------------------------------------------------
+  // Resolution order lives in Lib.locateScript(): the sfsPath setting, $PATH,
+  // known install dirs, every PATH entry, then a bounded $HOME search. The
+  // shell process's PATH is often minimal, so no step may depend on it alone.
   readonly property string home: Quickshell.env("HOME") || ""
-  readonly property var binCandidates: {
-    var list = []
-    var add = function(p) { if (p !== "" && list.indexOf(p) < 0) list.push(p) }
-    if (sfsBin.indexOf("/") >= 0) add(sfsBin)                       // explicit path, absolute or ~/
-    else add(sfsBin)                                                // bare name — try $PATH first
-    add(home + "/.local/bin/sfs")                                   // no-sudo script install
-    add("/home/linuxbrew/.linuxbrew/bin/sfs")                       // homebrew (Linux)
-    add(home + "/.linuxbrew/bin/sfs")                               // homebrew (macOS, homedir)
-    add("/usr/local/bin/sfs")
-    add("/usr/bin/sfs")                                             // pacman/AUR install
-    add("/opt/homebrew/bin/sfs")                                    // homebrew (macOS, arm)
-    return list
-  }
 
   // Ports to check for an already-running server: the configured one, plus
   // whatever previous plugin sessions recorded (survives shell restarts).
@@ -97,20 +86,11 @@ BarWidget {
   // ---- Lifecycle --------------------------------------------------------------
   Component.onCompleted: locate()
 
-  // Step 1: find the binary. Tries each candidate with `test -x` (absolute
-  // paths) or `command -v` (bare names) in one shell call; first hit wins.
+  // Step 1: find the binary, wherever it lives. Lib.locateScript() emits a
+  // single /bin/sh script covering every resolution strategy; first hit wins.
   function locate() {
     phase = "locating"
-    var probe = ""
-    for (var i = 0; i < binCandidates.length; i++) {
-      var p = binCandidates[i]
-      if (p.indexOf("/") >= 0)
-        probe += "if [ -x " + Lib.shellQuote(p) + " ]; then echo " + Lib.shellQuote(p) + "; exit 0; fi; "
-      else
-        probe += "p=$(command -v " + Lib.shellQuote(p) + " 2>/dev/null) && [ -n \"$p\" ] && echo \"$p\" && exit 0; "
-    }
-    probe += "exit 1"
-    locateProc.command = ["/bin/sh", "-c", probe]
+    locateProc.command = ["/bin/sh", "-c", Lib.locateScript(sfsBin, home)]
     locateProc.running = true
   }
 
