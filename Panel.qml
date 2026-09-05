@@ -23,6 +23,27 @@ Panel {
   property var anchorItem: null
   property var hostWidget: null
 
+  // ---- Assisted install ----------------------------------------------------
+  // ConfirmDialog state + terminal launcher. installFailedShown latches on
+  // once the user returns from an install attempt that did not produce a
+  // usable sfs binary; a successful relocate() clears it.
+  property bool installConfirmOpen: false
+  property bool installFailedShown: false
+
+  function launchInstall() {
+    var sh = [
+      "curl -fsSL https://raw.githubusercontent.com/vst93/sfs/main/cmd/install.sh -o /tmp/sfs-install.sh",
+      "&& sh /tmp/sfs-install.sh",
+      "; echo",
+      "; read -n 1 -s -r -p '" + (root.lang === "zh" ? "按任意键关闭…" : "Press any key to close…") + "'"
+    ].join(" ")
+    if (root.bar) root.bar.run("omarchy-launch-tui sh -c " + Lib.shellQuote(sh))
+    // When the terminal closes there is no callback — the user comes back and
+    // either hits "Search again" (which clears the latch on success) or the
+    // heartbeat retries on its own. Show the failure hint meanwhile.
+    root.installFailedShown = true
+  }
+
   readonly property var widget: hostWidget || null
   readonly property var m: widget ? widget.model : null
   readonly property bool syncing: widget ? widget.syncing : false
@@ -35,7 +56,7 @@ Panel {
   readonly property string fontFam: root.bar ? root.bar.fontFamily : Style.font.family
 
   function open() {
-    if (widget) widget.ensureBackend()
+    if (widget) widget.locateIfIdle()
     root.controller.show()
   }
   function close() {
@@ -52,27 +73,39 @@ Panel {
     "en": {
       title: "SFS Sync", subtitle: "WebDAV file sync",
       on: "Connected", off: "Offline", starting: "Starting…",
-      notInstalled: "sfs not found",
+      notInstalled: "SFS not found", retrying: "Looking for SFS…",
+      installTitle: "SFS is not installed yet.",
+      installBody: "Install the SFS command line tool, then retry. The plugin opens a terminal and runs SFS's official install script.",
+      installBtn: "Install SFS…", installConfirm: "Run the SFS install script in a terminal?",
+      installNow: "Install", installCancel: "Cancel", installLater: "Not now",
+      retryBtn: "Search again",
+      installFailed: "Install did not finish — run the script manually and try again.",
       syncAll: "Sync all", syncing: "Syncing…", web: "Web UI",
       files: "Files", empty: "No files yet — add them in the SFS app.",
       notConfigured: "WebDAV not configured — open SFS to set it up.",
       lastSync: "Last sync", never: "—",
       up: "uploaded", down: "downloaded", skip: "skipped", fail: "failed",
       upload: "Upload", download: "Download", forcedUp: "Force up", forcedDown: "Force down",
-      language: "中文", langTip: "Switch to Chinese",
+      language: "中文", langTip: "Switch to English",
       busy: "…"
     },
     "zh": {
       title: "SFS 同步", subtitle: "WebDAV 文件同步",
       on: "已连接", off: "未连接", starting: "启动中…",
-      notInstalled: "未找到 sfs",
+      notInstalled: "未找到 SFS", retrying: "正在查找 SFS…",
+      installTitle: "尚未安装 SFS。",
+      installBody: "需要先安装 SFS 命令行工具。点击下面的按钮会打开终端并运行 SFS 官方安装脚本。",
+      installBtn: "安装 SFS…", installConfirm: "在终端中运行 SFS 官方安装脚本？",
+      installNow: "安装", installCancel: "取消", installLater: "暂不",
+      retryBtn: "重新查找",
+      installFailed: "安装未完成 — 请手动运行安装脚本后重试。",
       syncAll: "全部同步", syncing: "同步中…", web: "网页界面",
       files: "文件", empty: "还没有文件 — 请在 SFS 应用里添加。",
       notConfigured: "WebDAV 未配置 — 请先打开 SFS 设置。",
       lastSync: "上次同步", never: "—",
       up: "上传", down: "下载", skip: "跳过", fail: "失败",
       upload: "上传", download: "下载", forcedUp: "强传", forcedDown: "强拉",
-      language: "English", langTip: "Switch to English",
+      language: "English", langTip: "Switch to Chinese",
       busy: "…"
     }
   })
@@ -102,8 +135,27 @@ Panel {
     PanelKeyCatcher {
       id: keyCatcher
       anchors.fill: parent
-      onCloseRequested: root.close()
+      onCloseRequested: {
+        if (root.installConfirmOpen) { root.installConfirmOpen = false; return }
+        root.close()
+      }
       onTabRequested: function(direction) { root.switchPanel(direction) }
+
+      // Install confirmation — overlay above the key catcher so keys route to
+      // the dialog while it is open.
+      ConfirmDialog {
+        anchors.fill: parent
+        opened: root.installConfirmOpen
+        message: root.t("installConfirm")
+        confirmText: root.t("installNow")
+        cancelText: root.t("installLater")
+        fontFamily: root.fontFam
+        onConfirmed: {
+          root.installConfirmOpen = false
+          root.launchInstall()
+        }
+        onCanceled: root.installConfirmOpen = false
+      }
 
       Column {
         id: content
@@ -117,26 +169,21 @@ Panel {
           detail: {
             var w = root.widget
             if (!w) return root.t("off")
-            if (w.endpoint === "") {
-              if (w.starting) return root.t("starting")
-              if (w.retry >= 3) return root.t("notInstalled")
-              return root.t("off")
-            }
-            return root.t("on")
+            if (w.phase === "notFound") return root.t("notInstalled")
+            if (w.phase === "connected") return root.t("on")
+            if (w.phase === "starting") return root.t("starting")
+            return root.t("off")
           }
           foreground: root.fg
           fontFamily: root.fontFam
           iconComponent: Component {
-            Text {
-              text: "\u21C4"
+            SfsIcon {
+              iconSize: Style.font.display
               color: {
                 var w = root.widget
-                if (!w || w.endpoint === "") return root.dim
+                if (!w || w.phase !== "connected") return root.dim
                 return Color.accent
               }
-              font.family: root.fontFam
-              font.pixelSize: Style.font.display
-              anchors.verticalCenter: parent.verticalCenter
             }
           }
           trailingControl: Component {
@@ -191,16 +238,71 @@ Panel {
         }
 
         // ---- States replacing the list -------------------------------------
+        // "SFS not found" page: explanation + assisted install + manual retry.
+        // The install runs SFS's official install.sh in a user-facing terminal
+        // (omarchy-launch-tui) after an explicit confirm — the plugin itself
+        // never downloads or writes anything outside the shell's view.
+        Column {
+          width: parent.width
+          spacing: Style.space(8)
+          visible: root.widget !== null && root.widget.phase === "notFound"
+
+          Text {
+            width: parent.width
+            text: root.t("installTitle")
+            color: root.warn
+            font.family: root.fontFam
+            font.pixelSize: Style.font.body
+            wrapMode: Text.WordWrap
+          }
+          Text {
+            width: parent.width
+            text: root.t("installBody")
+            color: root.dim
+            font.family: root.fontFam
+            font.pixelSize: Style.font.caption
+            wrapMode: Text.WordWrap
+          }
+          Row {
+            spacing: Style.space(8)
+
+            Button {
+              text: root.t("installBtn")
+              iconText: "\u2193"
+              fontFamily: root.fontFam
+              onClicked: { root.installConfirmOpen = true }
+            }
+            Button {
+              text: root.t("retryBtn")
+              iconText: "\u21BB"
+              fontFamily: root.fontFam
+              bordered: true
+              onClicked: { root.installFailedShown = false; if (root.widget) root.widget.relocate() }
+            }
+          }
+          Text {
+            width: parent.width
+            visible: root.installFailedShown
+            text: root.t("installFailed")
+            color: root.warn
+            font.family: root.fontFam
+            font.pixelSize: Style.font.caption
+            wrapMode: Text.WordWrap
+          }
+        }
+
         Text {
           width: parent.width
           visible: {
-            if (!root.widget) return true
-            if (root.widget.endpoint === "" && !root.widget.starting) return true
+            if (!root.widget) return false
+            if (root.widget.phase === "notFound") return false
+            if (root.widget.phase === "locating" || root.widget.phase === "starting") return root.m === null
             if (root.m === null) return false
             return root.m.storage === false
           }
           text: {
             if (root.m !== null && root.m.storage === false) return root.t("notConfigured")
+            if (root.widget && root.widget.phase === "locating") return root.t("retrying")
             return root.t("off")
           }
           color: root.warn

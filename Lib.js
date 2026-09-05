@@ -1,8 +1,38 @@
 .pragma library
 
-// SFS Sync plugin — shared helpers: status metadata, formatting, backend glue.
+// SFS Sync plugin — shared helpers: status metadata, formatting, shell glue.
 // Pure JS so both the bar widget and the panel can use it without creating
 // extra Qt objects.
+
+// ---- Shell glue -------------------------------------------------------------
+
+// Single-quote for /bin/sh. Keeps user-configured paths (sfsPath) from
+// breaking the command line — or from executing anything.
+function shellQuote(s) {
+    return "'" + String(s).replace(/'/g, "'\\''") + "'"
+}
+
+// Probe a list of ports for an already-listening SFS server. Prints
+// "reuse <port>" for the first port that answers /api/info, "spawn" otherwise.
+// Only stdout is parsed; curl noise goes to stderr and is discarded.
+function probeScript(ports) {
+    var script = ""
+    for (var i = 0; i < ports.length; i++) {
+        var p = ports[i]
+        if (!(p > 0)) continue
+        script += "if curl -sS -m 1 -o /dev/null " + shellQuote("http://127.0.0.1:" + p + "/api/info") + " 2>/dev/null; then echo reuse " + p + "; exit 0; fi; "
+    }
+    script += "echo spawn"
+    return script
+}
+
+// `sfs web <port>` prints "SFS Web mode started at http://localhost:NNNNN".
+// The requested port can be busy, in which case SFS re-binds to a random one
+// and reports it here — always trust the printed port over the requested one.
+function portFromLine(line) {
+    var m = String(line || "").match(/localhost:(\d+)/)
+    return m ? parseInt(m[1], 10) : 0
+}
 
 // ---- Status metadata -------------------------------------------------------
 // One entry per status key the SFS API emits (web server `buildFileListItem`
@@ -61,13 +91,4 @@ function fmtTime(ms, lang) {
 function hostOf(url) {
     var m = String(url || "").match(/^https?:\/\/([^\/]+)/)
     return m ? m[1] : url
-}
-
-// ---- Backend stdout --------------------------------------------------------
-// `sfs web <port>` prints "SFS Web mode started at http://localhost:NNNNN".
-// The requested port can be busy, in which case SFS re-binds to a random one
-// and reports it here — always trust the printed port over the requested one.
-function portFromLine(line) {
-    var m = String(line || "").match(/localhost:(\d+)/)
-    return m ? parseInt(m[1], 10) : 0
 }

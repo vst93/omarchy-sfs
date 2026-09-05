@@ -8,7 +8,7 @@ A native [Omarchy](https://omarchy.org) bar plugin for [SFS (SmallFileSync)](htt
 
 ## Features
 
-- **Bar widget** — a `⇄ synced/total` counter that turns **urgent-red** when any file has a conflict or is missing locally
+- **Bar widget** — a flat folder-sync icon (Lucide) with a `synced/total` counter that turns **urgent-red** when any file has a conflict or is missing locally
 - **Control panel** — file list with per-file status, size, and last-sync time
 - **Per-file actions** — upload pending files, download cloud-only files, resolve conflicts with explicit force-up/force-down
 - **Sync all** — one click, with a localized outcome line (uploaded / downloaded / skipped / failed)
@@ -30,11 +30,20 @@ omarchy plugin add https://github.com/vst93/omarchy-sfs.git --enable
 
 The widget appears in the right section of your bar. It starts the `sfs web` backend automatically on first click.
 
+### If SFS is not installed
+
+The plugin looks for the `sfs` binary in `$PATH` and the standard install locations (`~/.local/bin`, Homebrew, `/usr/local/bin`). If it cannot find one, the panel shows a short "SFS not found" page with:
+
+- **Install SFS…** — opens a terminal and runs SFS's official install script (you confirm before anything runs; the plugin itself never downloads or writes files)
+- **Search again** — re-scan after you have installed SFS another way
+
+Omarchy plugins are plain QML folders with no install hooks, so SFS cannot be pulled in automatically by `omarchy plugin add` — the assisted install above is the one-click path.
+
 ## Usage
 
 | Action | Result |
 |---|---|
-| Left-click the `⇄` widget | Open the control panel |
+| Left-click the widget | Open the control panel |
 | Click **Sync all** | Full sync (smart: uploads local changes, downloads cloud changes, skips identical) |
 | Hover a file row | Show per-file actions (↑ upload / ↓ download; conflicts get both) |
 | Middle-click the widget | Open the SFS web UI in your browser |
@@ -87,7 +96,7 @@ The backend binds to `127.0.0.1` only, and the plugin talks to it with plain loc
 
 ### 功能
 
-- **栏组件** — `⇄ 已同步/总数` 计数；出现冲突或文件缺失时变红
+- **栏组件** — 扁平 folder-sync 图标（Lucide 风格）+ `已同步/总数` 计数；出现冲突或文件缺失时变红
 - **控制面板** — 文件列表，显示每个文件的状态、大小、最近同步时间
 - **单文件操作** — 上传待传文件、下载云端文件；冲突文件提供"强传/强拉"两个方向
 - **全部同步** — 一键全量同步，并显示结果统计（上传/下载/跳过/失败）
@@ -101,6 +110,15 @@ The backend binds to `127.0.0.1` only, and the plugin talks to it with plain loc
 ```sh
 omarchy plugin add https://github.com/vst93/omarchy-sfs.git --enable
 ```
+
+### 如果还没安装 SFS
+
+插件会在 `$PATH` 和常见安装位置（`~/.local/bin`、Homebrew、`/usr/local/bin`）查找 `sfs`。找不到时面板会显示"未找到 SFS"页面：
+
+- **安装 SFS…** — 打开终端运行 SFS 官方安装脚本（运行前需确认；插件本身不下载不写任何文件）
+- **重新查找** — 用其他方式装好 SFS 后重新扫描
+
+Omarchy 插件只是纯 QML 文件夹，没有安装钩子，所以 `omarchy plugin add` 无法顺带自动安装 SFS — 上面的辅助安装就是一键路径。
 
 ### 配置
 

@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "io.github.vst93.sfs",
   "name": "SFS Sync",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "author": "vst93",
   "license": "MIT",
   "description": "SFS (SmallFileSync) sync status and control panel for the Omarchy bar. Monitors your WebDAV-synced files, lets you upload/download individual files or sync everything, and opens the SFS web UI.",
@@ -17,6 +17,44 @@
     "description": "WebDAV file sync status with a control panel",
     "category": "System",
     "allowMultiple": false,
-    "defaultSection": "right"
+    "defaultSection": "right",
+    "defaults": {
+      "port": 8791,
+      "pollSeconds": 30,
+      "sfsPath": "sfs",
+      "lang": "en"
+    },
+    "schema": [
+      {
+        "key": "port",
+        "type": "integer",
+        "label": "Local port for the sfs web backend",
+        "min": 1024,
+        "max": 65535,
+        "step": 1,
+        "defaultValue": 8791
+      },
+      {
+        "key": "pollSeconds",
+        "type": "integer",
+        "label": "Status refresh interval (seconds)",
+        "min": 10,
+        "max": 600,
+        "step": 5,
+        "defaultValue": 30
+      },
+      {
+        "key": "sfsPath",
+        "type": "string",
+        "label": "Path to the sfs binary (blank = search standard locations)",
+        "defaultValue": "sfs"
+      },
+      {
+        "key": "lang",
+        "type": "string",
+        "label": "Panel language (en/zh)",
+        "defaultValue": "en"
+      }
+    ]
   }
 }
