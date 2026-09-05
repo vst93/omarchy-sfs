@@ -398,29 +398,16 @@ BarWidget {
     bar: root.bar
     labelVisible: false
     hasVisualContent: true
-    // Icon + counter as one component: WidgetButton centers `text` and the
-    // icon in the same slot, so a separate label would overlap the icon.
     iconComponent: Component {
-      Row {
-        spacing: Style.space(5)
-
+      Item {
         SfsIcon {
-          anchors.verticalCenter: parent.verticalCenter
+          anchors.centerIn: parent
           iconSize: Style.space(13)
           color: {
             if (root.ready && root.hasUrgent) return Color.urgent
             if (!root.ready) return Qt.darker(root.bar ? root.bar.barForeground : Color.foreground, 1.5)
             return root.bar ? root.bar.barForeground : Color.foreground
           }
-        }
-        Text {
-          visible: root.ready
-          anchors.verticalCenter: parent.verticalCenter
-          text: root.matched + "/" + root.total
-          color: root.hasUrgent ? Color.urgent
-                 : (root.bar ? root.bar.barForeground : Color.foreground)
-          font.family: root.bar ? root.bar.fontFamily : Style.font.family
-          font.pixelSize: Style.font.body
         }
       }
     }
