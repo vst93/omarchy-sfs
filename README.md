@@ -10,7 +10,8 @@ A native [Omarchy](https://omarchy.org) bar plugin for [SFS (SmallFileSync)](htt
 
 - **Bar widget** — a flat folder-sync icon (Lucide) with a `synced/total` counter that turns **urgent-red** when any file has a conflict or is missing locally
 - **Control panel** — a scrollable file list with per-file status, size, last-sync time, and local path
-- **Per-file actions** — hover a row for its primary action (upload / download / pull); click the ✎ to edit: bind/unbind the local dir, edit the note, copy the path, or delete the record (with confirmation)
+- **Per-file actions** — every row keeps its primary sync action and edit control visible; edit a row to bind/unbind the local dir, edit the note, copy the path, or delete the record (with confirmation)
+- **Responsive controls** — the panel and every form dialog scroll on short screens; Escape closes the active dialog before closing the panel
 - **Sync all** — one click, with a localized outcome line (uploaded / downloaded / skipped / failed)
 - **Storage settings** — read and set the WebDAV endpoint, username, password, and remote base dir, test the connection, and toggle auto-sync
 - **Add file** — add a sync entry from the bar (path + optional note)
@@ -51,11 +52,11 @@ Omarchy plugins are plain QML folders with no install hooks, so SFS cannot be pu
 | Click **Add file** | Add a sync entry (path + optional note) |
 | Click **Storage** | Open WebDAV settings, test the connection, toggle auto-sync |
 | Click **Export** | Copy the storage config to clipboard (right-click = export file list) |
-| Hover a file row | Primary action for its state (↑ upload / ↓ download / pull); ✎ opens edit (dir / note / copy / delete) |
+| Use a file row's action controls | Primary action for its state (↑ upload / ↓ download / pull); ✎ opens edit (dir / note / copy / delete) |
 | Middle-click the widget | Open the SFS web UI in your browser |
 | Right-click the widget | Force a status refresh |
 | **中文 / English** button | Switch language (persisted) |
-| `Esc` | Close the panel |
+| `Esc` | Close the active dialog, or the panel when no dialog is open |
 
 ### Configuration
 
@@ -88,7 +89,7 @@ The plugin never edits your SFS settings or data — removing it leaves SFS exac
 
 ## Privacy & security
 
-The backend binds to `127.0.0.1` only, and the plugin talks to it with plain local HTTP. Your WebDAV credentials stay inside SFS; the plugin never sees them.
+The backend binds to `127.0.0.1` only, and the plugin talks to it with plain local HTTP. Credentials are only held in the panel while editing and are sent to the local SFS API; exported config intentionally omits the password.
 
 ## License
 
@@ -104,7 +105,8 @@ The backend binds to `127.0.0.1` only, and the plugin talks to it with plain loc
 
 - **栏组件** — 扁平 folder-sync 图标（Lucide 风格）+ `已同步/总数` 计数；出现冲突或文件缺失时变红
 - **控制面板** — 滚动的文件列表，显示每个文件的状态、大小、最近同步时间与本地路径
-- **单文件操作** — 悬停文件行查看主操作（上传/下载/拉取）；点 ✎ 后编辑：目录关联、备注、复制路径或删除（带确认）
+- **单文件操作** — 每行常驻主操作与编辑按钮（上传/下载/拉取）；编辑后可设置目录、备注、复制路径或删除（带确认）
+- **响应式交互** — 面板和所有表单弹窗在小屏上可滚动；按 Esc 先关闭当前弹窗，再关闭面板
 - **全部同步** — 一键全量同步，并显示结果统计（上传/下载/跳过/失败）
 - **存储设置** — 在面板直接查看/配置 WebDAV 地址/用户名/密码/远端目录、测试连接、自动同步开关
 - **添加文件** — 面板直接添加待同步条目（路径 + 可选备注）
