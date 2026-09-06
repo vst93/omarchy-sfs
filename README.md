@@ -9,9 +9,12 @@ A native [Omarchy](https://omarchy.org) bar plugin for [SFS (SmallFileSync)](htt
 ## Features
 
 - **Bar widget** — a flat folder-sync icon (Lucide) with a `synced/total` counter that turns **urgent-red** when any file has a conflict or is missing locally
-- **Control panel** — file list with per-file status, size, and last-sync time
-- **Per-file actions** — upload pending files, download cloud-only files, resolve conflicts with explicit force-up/force-down
+- **Control panel** — a scrollable file list with per-file status, size, last-sync time, and local path
+- **Per-file actions** — hover a row for its primary action (upload / download / pull); click the ✎ to edit: bind/unbind the local dir, edit the note, copy the path, or delete the record (with confirmation)
 - **Sync all** — one click, with a localized outcome line (uploaded / downloaded / skipped / failed)
+- **Storage settings** — read and set the WebDAV endpoint, username, password, and remote base dir, test the connection, and toggle auto-sync
+- **Add file** — add a sync entry from the bar (path + optional note)
+- **Export** — copy the storage config (or, on right-click, the file list) as JSON to the clipboard
 - **Web UI shortcut** — middle-click the bar widget (or the panel button) to open the full SFS web interface
 - **Auto backend** — starts `sfs web` on demand, reuses a server that is already running, suppresses the automatic browser popup, and reconnects on its own after crashes or restarts
 - **Bilingual** — English by default, 中文 with one click (persisted in your Omarchy config)
@@ -45,7 +48,10 @@ Omarchy plugins are plain QML folders with no install hooks, so SFS cannot be pu
 |---|---|
 | Left-click the widget | Open the control panel |
 | Click **Sync all** | Full sync (smart: uploads local changes, downloads cloud changes, skips identical) |
-| Hover a file row | Show per-file actions (↑ upload / ↓ download; conflicts get both) |
+| Click **Add file** | Add a sync entry (path + optional note) |
+| Click **Storage** | Open WebDAV settings, test the connection, toggle auto-sync |
+| Click **Export** | Copy the storage config to clipboard (right-click = export file list) |
+| Hover a file row | Primary action for its state (↑ upload / ↓ download / pull); ✎ opens edit (dir / note / copy / delete) |
 | Middle-click the widget | Open the SFS web UI in your browser |
 | Right-click the widget | Force a status refresh |
 | **中文 / English** button | Switch language (persisted) |
@@ -97,9 +103,12 @@ The backend binds to `127.0.0.1` only, and the plugin talks to it with plain loc
 ### 功能
 
 - **栏组件** — 扁平 folder-sync 图标（Lucide 风格）+ `已同步/总数` 计数；出现冲突或文件缺失时变红
-- **控制面板** — 文件列表，显示每个文件的状态、大小、最近同步时间
-- **单文件操作** — 上传待传文件、下载云端文件；冲突文件提供"强传/强拉"两个方向
+- **控制面板** — 滚动的文件列表，显示每个文件的状态、大小、最近同步时间与本地路径
+- **单文件操作** — 悬停文件行查看主操作（上传/下载/拉取）；点 ✎ 后编辑：目录关联、备注、复制路径或删除（带确认）
 - **全部同步** — 一键全量同步，并显示结果统计（上传/下载/跳过/失败）
+- **存储设置** — 在面板直接查看/配置 WebDAV 地址/用户名/密码/远端目录、测试连接、自动同步开关
+- **添加文件** — 面板直接添加待同步条目（路径 + 可选备注）
+- **导出** — 一键把存储配置（或文件清单）以 JSON 复制到剪贴板
 - **网页界面** — 中键点击栏组件直接打开 SFS Web UI
 - **自动后端** — 按需启动 `sfs web`，复用已在运行的实例，自动屏蔽 SFS 的浏览器弹窗，崩溃或重启后自动重连
 - **中英双语** — 默认英文，面板内一键切换中文（设置持久化到 Omarchy 配置）

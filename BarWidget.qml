@@ -137,25 +137,63 @@ BarWidget {
     phase = "connected"
     saveState(port)
     refresh()
+    settingsGet(function (payload, text) {
+      if (payload && payload.settings) root.autoSyncEnabled = payload.settings.autoSync === true
+    })
   }
 
   function refresh() {
-    if (endpoint === "" || netBusy) return
-    netBusy = true
-    api.run("GET", "/api/files", "")
+    if (endpoint === "") return
+    apiReq("GET", "/api/files", "", function(payload, text) {
+      if (payload && payload.files) {
+        root.apiFails = 0
+        root.model = payload
+      } else {
+        root.apiFails++
+        if (root.apiFails >= 3) root.relocate()
+      }
+    })
   }
 
-  function syncAll() {
-    if (endpoint === "" || netBusy || syncing) return
+  function syncAll(isAuto) {
+    if (endpoint === "" || syncing) return
     syncing = true
-    netBusy = true
-    api.run("POST", "/api/sync", JSON.stringify({ syncType: "", isAuto: false }))
+    apiReq("POST", "/api/sync", JSON.stringify({ syncType: "", isAuto: !!isAuto }), function(payload, text) {
+      root.syncing = false
+      if (payload && payload.summary) root.lastSync = payload
+      root.refresh()
+    })
   }
 
-  function syncSingle(id, syncType) {
-    if (endpoint === "" || netBusy) return
-    netBusy = true
-    api.run("POST", "/api/sync/single", JSON.stringify({ id: id, syncType: syncType }))
+  function syncSingle(id, syncType, cb) {
+    if (endpoint === "") return
+    apiReq("POST", "/api/sync/single", JSON.stringify({ id: id, syncType: syncType }), function(payload, text) {
+      root.refresh()
+      if (cb) cb(payload, text)
+    })
+  }
+
+  // ---- Management API (WebDAV settings, add/delete/bind files) -------------
+  function settingsGet(cb) { apiReq("GET", "/api/settings", "", cb) }
+  function settingsSave(data, cb) {
+    apiReq("POST", "/api/settings", JSON.stringify(data), function(payload, text) {
+      if (payload && payload.message) root.settingsGet(function(s) {
+        if (s && s.settings) root.autoSyncEnabled = s.settings.autoSync === true
+      })
+      if (cb) cb(payload, text)
+    })
+  }
+  function settingsTest(w, cb) { apiReq("POST", "/api/settings/test", JSON.stringify(w), cb) }
+  function addFile(path, note, cb) { apiReq("POST", "/api/files/add", JSON.stringify({ filePath: path, note: note || "" }), cb) }
+  function deleteFile(id, cb) { apiReq("POST", "/api/files/delete", JSON.stringify({ id: id }), function(payload, text) { root.refresh(); if (cb) cb(payload, text) }) }
+  function setFileDir(id, dir, cb) { apiReq("POST", "/api/files/dir", JSON.stringify({ id: id, dir: dir || "" }), function(payload, text) { root.refresh(); if (cb) cb(payload, text) }) }
+  function setNote(id, note, cb) { apiReq("POST", "/api/files/note", JSON.stringify({ id: id, note: note || "" }), function(payload, text) { root.refresh(); if (cb) cb(payload, text) }) }
+
+  // Clipboard helper (wl-clipboard).
+  function copy(text) {
+    if (text === "" || !root.bar) return false
+    root.bar.run("wl-copy " + Lib.shellQuote(String(text)))
+    return true
   }
 
   function setLang(l) {
@@ -184,48 +222,66 @@ BarWidget {
   }
 
   // ---- HTTP client (curl; the shell sandbox has no QML XHR) ------------------
+  // Every API request funnels through a single serialized queue. Responses
+  // dispatch to the caller's callback with (json, rawText); bodies that are
+  // not JSON arrive with json=null.
+  property var apiQueue: []
+  property var apiJob: null
+  property bool apiBusy: false
   property string apiOut: ""
+
+  function apiReq(method, path, body, cb) {
+    apiQueue.push({ method: method, path: path, body: body, cb: cb })
+    pumpApi()
+  }
+  function pumpApi() {
+    if (root.apiBusy || root.apiQueue.length === 0 || root.endpoint === "") return
+    root.apiBusy = true
+    root.apiJob = root.apiQueue.shift()
+    var job = root.apiJob
+    var args = ["curl", "-sS", "-m", "120"]
+    if (job.method === "POST") args.push("-X", "POST", "-H", "Content-Type: application/json", "-d", job.body || "{}")
+    args.push(root.endpoint + job.path)
+    root.netBusy = true
+    api.command = args
+    api.running = true
+  }
   Process {
     id: api
-    property string path: ""
-    function run(method, p, body) {
-      path = p
-      var args = ["curl", "-sS", "-m", "120"]
-      if (method === "POST") args.push("-X", "POST", "-H", "Content-Type: application/json", "-d", body)
-      args.push(root.endpoint + p)
-      command = args
-      running = true
-    }
     stdout: SplitParser {
       onRead: function(data) { root.apiOut += data + "\n" }
     }
     onExited: function(exitCode) {
       var text = root.apiOut
-      var path = api.path
-      api.path = ""
+      var job = root.apiJob
       root.apiOut = ""
+      root.apiJob = null
+      root.apiBusy = false
       root.netBusy = false
-      if (path === "/api/files") {
-        var payload = null
-        try { payload = JSON.parse(text) } catch (e) { payload = null }
+      var payload = null
+      try { payload = JSON.parse(text) } catch (e) { payload = null }
+      if (job && job.cb) {
+        job.cb(payload, text)
+        root.pumpApi()
+        return
+      }
+      // No callback: legacy paths keep the same bookkeeping.
+      if (job && job.path === "/api/files") {
         if (payload && payload.files) {
           root.apiFails = 0
           root.model = payload
         } else {
-          // Transient HTTP trouble — never conflate with "binary missing".
-          // Several failures in a row mean the server died; go re-locate.
           root.apiFails++
           if (root.apiFails >= 3) root.relocate()
         }
-      } else if (path === "/api/sync") {
+      } else if (job && job.path === "/api/sync") {
         root.syncing = false
-        var res = null
-        try { res = JSON.parse(text) } catch (e) { res = null }
-        if (res && res.summary) root.lastSync = res
+        if (payload && payload.summary) root.lastSync = payload
         root.refresh()
-      } else if (path === "/api/sync/single") {
+      } else if (job && job.path === "/api/sync/single") {
         root.refresh()
       }
+      root.pumpApi()
     }
   }
 
@@ -300,11 +356,17 @@ BarWidget {
   }
 
   // ---- Polling ---------------------------------------------------------------
+  // When autoSync is enabled (set via the panel / SFS settings) each poll
+  // runs a full smart sync instead of a plain refresh.
+  property bool autoSyncEnabled: false
   Timer {
     interval: Math.max(10, root.pollSec) * 1000
     running: root.phase === "connected"
     repeat: true
-    onTriggered: root.refresh()
+    onTriggered: {
+      if (root.autoSyncEnabled && root.ready && !root.syncing) root.syncAll(true)
+      else root.refresh()
+    }
   }
   Timer {
     // slow heartbeat while not connected so the widget recovers on its own
