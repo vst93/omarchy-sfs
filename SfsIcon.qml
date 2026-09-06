@@ -34,8 +34,8 @@ Item {
       strokeColor: root.color
       strokeWidth: 2 * root.k
       fillColor: "transparent"
-      capStyle: ShapePath.Round
-      joinStyle: ShapePath.Round
+      capStyle: ShapePath.RoundCap
+      joinStyle: ShapePath.RoundJoin
       startX: 9 * root.k
       startY: 20 * root.k
       PathLine { x: 4 * root.k;  y: 20 * root.k }
@@ -70,8 +70,8 @@ Item {
       strokeColor: root.color
       strokeWidth: 2 * root.k
       fillColor: "transparent"
-      capStyle: ShapePath.Round
-      joinStyle: ShapePath.Round
+      capStyle: ShapePath.RoundCap
+      joinStyle: ShapePath.RoundJoin
       startX: 12 * root.k
       startY: 10 * root.k
       PathLine { x: 12 * root.k; y: 14 * root.k }
@@ -83,8 +83,8 @@ Item {
       strokeColor: root.color
       strokeWidth: 2 * root.k
       fillColor: "transparent"
-      capStyle: ShapePath.Round
-      joinStyle: ShapePath.Round
+      capStyle: ShapePath.RoundCap
+      joinStyle: ShapePath.RoundJoin
       startX: 12 * root.k
       startY: 14 * root.k
       PathCubic { control1X: 12.5 * root.k;  control1Y: 13.46 * root.k
@@ -100,8 +100,8 @@ Item {
       strokeColor: root.color
       strokeWidth: 2 * root.k
       fillColor: "transparent"
-      capStyle: ShapePath.Round
-      joinStyle: ShapePath.Round
+      capStyle: ShapePath.RoundCap
+      joinStyle: ShapePath.RoundJoin
       startX: 22 * root.k
       startY: 22 * root.k
       PathLine { x: 22 * root.k; y: 18 * root.k }
@@ -113,8 +113,8 @@ Item {
       strokeColor: root.color
       strokeWidth: 2 * root.k
       fillColor: "transparent"
-      capStyle: ShapePath.Round
-      joinStyle: ShapePath.Round
+      capStyle: ShapePath.RoundCap
+      joinStyle: ShapePath.RoundJoin
       startX: 22 * root.k
       startY: 18 * root.k
       PathCubic { control1X: 21.5 * root.k;  control1Y: 18.53 * root.k

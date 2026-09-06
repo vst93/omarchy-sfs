@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "io.github.vst93.sfs",
   "name": "SFS Sync",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "author": "vst93",
   "license": "MIT",
   "description": "SFS (SmallFileSync) sync status and control panel for the Omarchy bar. Monitors your WebDAV-synced files, lets you upload/download individual files or sync everything, and opens the SFS web UI.",

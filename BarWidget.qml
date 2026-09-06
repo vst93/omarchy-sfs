@@ -84,13 +84,19 @@ BarWidget {
   function t(key) { return tr[lang] && tr[lang][key] ? tr[lang][key] : tr["en"][key] }
 
   // ---- Lifecycle --------------------------------------------------------------
-  Component.onCompleted: locate()
+  Component.onCompleted: {
+    // Restore a persisted language (panel toggle, survives restarts).
+    readLangProc.command = ["/bin/sh", "-c", "cat " + Lib.shellQuote(root.stateDir + "/omarchy-sfs/lang.txt") + " 2>/dev/null"]
+    readLangProc.running = true
+    locate()
+  }
 
   // Step 1: find the binary, wherever it lives. Lib.locateScript() emits a
   // single /bin/sh script covering every resolution strategy; first hit wins.
   function locate() {
     phase = "locating"
-    locateProc.command = ["/bin/sh", "-c", Lib.locateScript(sfsBin, home)]
+    var sc = Lib.locateScript(sfsBin, home)
+    locateProc.command = ["/bin/sh", "-c", sc]
     locateProc.running = true
   }
 
@@ -101,6 +107,7 @@ BarWidget {
     resolvedBin = binPath
     pendingPorts = [reqPort]
     stateOut = ""
+    readStateProc.command = ["/bin/sh", "-c", "cat " + Lib.shellQuote(root.stateFile) + " 2>/dev/null"]
     readStateProc.running = true
   }
 
@@ -113,7 +120,7 @@ BarWidget {
   function spawn(binPath) {
     phase = "starting"
     webProc.command = ["/bin/sh", "-c",
-      "env -u DISPLAY -u WAYLAND_DISPLAY exec " + Lib.shellQuote(binPath) + " web " + reqPort]
+      "exec env -u DISPLAY -u WAYLAND_DISPLAY " + Lib.shellQuote(binPath) + " web " + reqPort]
     webProc.running = true
   }
 
@@ -141,6 +148,17 @@ BarWidget {
     if (endpoint === "" || netBusy) return
     netBusy = true
     api.run("POST", "/api/sync/single", JSON.stringify({ id: id, syncType: syncType }))
+  }
+
+  function setLang(l) {
+    if (l !== "en" && l !== "zh") return
+    lang = l
+    // Persist so the next session survives the shell restart.
+    writeProc.command = ["/bin/sh", "-c",
+      "mkdir -p " + Lib.shellQuote(root.stateDir + "/omarchy-sfs") +
+      " && printf '%s' " + Lib.shellQuote(l) +
+      " > " + Lib.shellQuote(root.stateFile.replace(/endpoint\.json$/, "lang.txt"))]
+    writeProc.running = true
   }
 
   function openWebUI() {
@@ -208,7 +226,9 @@ BarWidget {
   Process {
     id: locateProc
     stdout: SplitParser {
-      onRead: function(data) { if (root.locateOut === "") root.locateOut = data.trim() }
+      onRead: function(data) {
+        if (root.locateOut === "") root.locateOut = data.trim()
+      }
     }
     onExited: function(exitCode) {
       var bin = root.locateOut
@@ -226,7 +246,9 @@ BarWidget {
   Process {
     id: probeProc
     stdout: SplitParser {
-      onRead: function(data) { if (root.probeOut === "") root.probeOut = data.trim() }
+      onRead: function(data) {
+        if (root.probeOut === "") root.probeOut = data.trim()
+      }
     }
     onExited: function(exitCode) {
       var line = root.probeOut
@@ -294,6 +316,12 @@ BarWidget {
     writeProc.running = true
   }
   property string stateOut: ""
+  Process {
+    id: readLangProc
+    stdout: SplitParser {
+      onRead: function(data) { var v = String(data).trim(); if (v === "en" || v === "zh") root.lang = v }
+    }
+  }
   Process {
     id: writeProc
   }
@@ -373,12 +401,10 @@ BarWidget {
     }
   }
 
-  WidgetButton {
+  BarIconButton {
     id: button
     anchors.fill: parent
     bar: root.bar
-    labelVisible: false
-    hasVisualContent: true
     iconComponent: Component {
       Item {
         SfsIcon {

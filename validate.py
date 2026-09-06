@@ -152,10 +152,14 @@ def check_qml_consistency(files: dict) -> None:
     if bw:
         if 'moduleName: "io.github.vst93.sfs"' not in bw:
             err("BarWidget.qml: moduleName does not match the manifest id")
-        for needed in ("Loader", "Panel.qml", "WidgetButton", "IpcHandler",
+        for needed in ("Loader", "Panel.qml", "IpcHandler",
                        "function open()", "function close()", "function toggle()"):
             if needed not in bw:
                 err(f"BarWidget.qml: bar-widget contract piece missing: {needed}")
+        # The clickable can be the base WidgetButton or the icon-capable
+        # subclass BarIconButton (extends WidgetButton).
+        if "BarIconButton" not in bw and "WidgetButton" not in bw:
+            err("BarWidget.qml: bar-widget contract piece missing: WidgetButton/BarIconButton")
     if panel:
         if 'moduleName: "io.github.vst93.sfs"' not in panel:
             err("Panel.qml: moduleName does not match the manifest id")
