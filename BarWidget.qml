@@ -69,6 +69,14 @@ BarWidget {
   readonly property string stateFile: stateDir + "/omarchy-sfs/endpoint.json"
 
   // ---- i18n -----------------------------------------------------------------
+  // Icon/counter color: urgent-red when anything conflicts or is missing,
+  // dimmed while no backend, theme foreground otherwise.
+  readonly property color iconColor: {
+    if (root.ready && root.hasUrgent) return Color.urgent
+    if (!root.ready) return Qt.darker(root.bar ? root.bar.barForeground : Color.foreground, 1.5)
+    return root.bar ? root.bar.barForeground : Color.foreground
+  }
+
   readonly property var tr: ({
     "en": {
       tooltipReady: "SFS Sync — click for details, right-click to refresh",
@@ -407,14 +415,25 @@ BarWidget {
     bar: root.bar
     iconComponent: Component {
       Item {
+        implicitWidth: icon.implicitWidth + (counter.visible ? counter.implicitWidth + Style.space(2) : 0)
+        implicitHeight: Math.max(icon.implicitHeight, counter.visible ? counter.implicitHeight : 0)
         SfsIcon {
-          anchors.centerIn: parent
+          id: icon
+          anchors.left: parent.left
+          anchors.verticalCenter: parent.verticalCenter
           iconSize: Style.space(13)
-          color: {
-            if (root.ready && root.hasUrgent) return Color.urgent
-            if (!root.ready) return Qt.darker(root.bar ? root.bar.barForeground : Color.foreground, 1.5)
-            return root.bar ? root.bar.barForeground : Color.foreground
-          }
+          color: iconColor
+        }
+        Text {
+          id: counter
+          anchors.left: icon.right
+          anchors.leftMargin: Style.space(2)
+          anchors.verticalCenter: parent.verticalCenter
+          visible: root.ready
+          text: root.matched + "/" + root.total
+          color: iconColor
+          font.family: root.bar ? root.bar.fontFamily : Style.font.family
+          font.pixelSize: Style.font.caption
         }
       }
     }
