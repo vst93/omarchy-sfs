@@ -343,6 +343,11 @@ Panel {
     })
     copyOut(JSON.stringify({ summary: root.m.summary, files: rows }, null, 2))
   }
+  function scrollListBy(dy) {
+    var lv = fileList
+    if (!lv) return
+    lv.contentY = Math.max(0, Math.min(lv.contentHeight - lv.height, lv.contentY + dy))
+  }
 
   KeyboardPanel {
     id: panel
@@ -357,6 +362,12 @@ Panel {
     PanelKeyCatcher {
       id: keyCatcher
       anchors.fill: parent
+      Keys.onPressed: function (event) {
+        if (event.key === Qt.Key_PageDown) { root.scrollListBy(220); event.accepted = true }
+        else if (event.key === Qt.Key_PageUp) { root.scrollListBy(-220); event.accepted = true }
+        else if (event.key === Qt.Key_Home) { fileList.contentY = 0; event.accepted = true }
+        else if (event.key === Qt.Key_End) { fileList.contentY = Math.max(0, fileList.contentHeight - fileList.height); event.accepted = true }
+      }
       onCloseRequested: {
         if (root.installConfirmOpen) { root.installConfirmOpen = false; return }
         if (addModal.visible) { addModal.visible = false; return }
@@ -591,15 +602,27 @@ Panel {
           wrapMode: Text.WordWrap
         }
 
-        // ---- File list (scrollable) -------------------------------------------------
-        ListView {
-          id: fileList
+        // ---- File list (scrollable, custom scrollbar) ---------------------------
+        Item {
+          id: listWrap
           width: parent.width
-          height: Math.min((root.m && root.m.files) ? root.m.files.length * Style.space(48) : 0, Style.space(320))
-          clip: true
-          visible: root.m !== null && (root.m.files || []).length > 0
-          model: root.m !== null ? (root.m.files || []) : []
-          spacing: Style.space(2)
+          property real listH: Math.min((root.m && root.m.files) ? root.m.files.length * Style.space(48) : 0, Style.space(320))
+          height: listH
+
+          ListView {
+            id: fileList
+            anchors.left: parent.left
+            anchors.top: parent.top
+            anchors.bottom: parent.bottom
+            anchors.right: parent.right
+            clip: true
+            visible: root.m !== null && (root.m.files || []).length > 0
+            model: root.m !== null ? (root.m.files || []) : []
+            spacing: Style.space(2)
+
+            flickDeceleration: 2200
+            maximumFlickVelocity: 1600
+            ScrollBar.vertical: ScrollBar { policy: ScrollBar.AsNeeded }
 
 
           delegate: Item {
@@ -705,6 +728,7 @@ Panel {
               }
             }
           }
+
         }
 
         // ---- Last sync outcome ----------------------------------------------
@@ -745,12 +769,15 @@ Panel {
         MouseArea { anchors.fill: parent; onClicked: addModal.visible = false }
 
         Rectangle {
+          id: addCard
           width: parent.width - Style.space(56)
           anchors.centerIn: parent
           color: Color.popups.background
           radius: Style.space(6)
           z: 1
+          height: Math.min(addCol.implicitHeight + Style.space(24), parent.height - Style.space(32))
           Column {
+            id: addCol
             anchors.margins: Style.space(12)
             width: parent.width - Style.space(24)
             spacing: Style.space(8)
@@ -797,12 +824,15 @@ Panel {
         MouseArea { anchors.fill: parent; onClicked: storageModal.visible = false }
 
         Rectangle {
+          id: storageCard
           width: parent.width - Style.space(56)
           anchors.centerIn: parent
           color: Color.popups.background
           radius: Style.space(6)
           z: 1
+          height: Math.min(storageCol.implicitHeight + Style.space(24), parent.height - Style.space(32))
           Column {
+            id: storageCol
             anchors.margins: Style.space(12)
             width: parent.width - Style.space(24)
             spacing: Style.space(5)
@@ -853,12 +883,15 @@ Panel {
         MouseArea { anchors.fill: parent; onClicked: dirModal.visible = false }
 
         Rectangle {
+          id: dirCard
           width: parent.width - Style.space(56)
           anchors.centerIn: parent
           color: Color.popups.background
           radius: Style.space(6)
           z: 1
+          height: Math.min(dirCol.implicitHeight + Style.space(24), parent.height - Style.space(32))
           Column {
+            id: dirCol
             anchors.margins: Style.space(12)
             width: parent.width - Style.space(24)
             spacing: Style.space(6)
@@ -907,12 +940,15 @@ Panel {
         MouseArea { anchors.fill: parent; onClicked: noteModal.visible = false }
 
         Rectangle {
+          id: noteCard
           width: parent.width - Style.space(56)
           anchors.centerIn: parent
           color: Color.popups.background
           radius: Style.space(6)
           z: 1
+          height: Math.min(noteCol.implicitHeight + Style.space(24), parent.height - Style.space(32))
           Column {
+            id: noteCol
             anchors.margins: Style.space(12)
             width: parent.width - Style.space(24)
             spacing: Style.space(6)
@@ -953,12 +989,15 @@ Panel {
         MouseArea { anchors.fill: parent; onClicked: editModal.visible = false }
 
         Rectangle {
+          id: editCard
           width: parent.width - Style.space(56)
           anchors.centerIn: parent
           color: Color.popups.background
           radius: Style.space(6)
           z: 1
+          height: Math.min(editCol.implicitHeight + Style.space(24), parent.height - Style.space(32))
           Column {
+            id: editCol
             anchors.margins: Style.space(12)
             width: parent.width - Style.space(24)
             spacing: Style.space(6)
@@ -1055,4 +1094,5 @@ Panel {
       Timer { id: toastTimer; interval: 2200; onTriggered: toastBar.visible = false }
     }
   }
+}
 }
