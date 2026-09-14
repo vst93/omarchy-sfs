@@ -4,6 +4,8 @@ A native [Omarchy](https://omarchy.org) bar plugin for [SFS (SmallFileSync)](htt
 
 **[English](#features)** · **[中文](#中文说明)**
 
+![SFS Sync control panel](docs/image.png)
+
 ---
 
 ## Features
@@ -112,6 +114,8 @@ The backend binds to `127.0.0.1` only, and the plugin talks to it with plain loc
 ## 中文说明
 
 [Omarchy](https://omarchy.org) 原生状态栏插件，为 [SFS (SmallFileSync)](https://github.com/vst93/sfs) 提供系统栏内的 WebDAV 同步状态与快捷操作。
+
+![SFS Sync 控制面板](docs/image.png)
 
 ### 功能
 

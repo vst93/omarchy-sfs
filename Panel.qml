@@ -40,6 +40,10 @@ Panel {
     // ---- Layout metrics ------------------------------------------------------
     readonly property int rowHeight: Style.space(48)
     readonly property int rowSpacing: Style.space(2)
+    // One control height for the toolbar (the primary button and the icon
+    // cluster), so their borders line up exactly. The kit Button defaults to a
+    // slightly taller box than a 28px group, which left the cluster 5px short.
+    readonly property int controlH: Style.space(32)
 
     // ---- Assisted install ----------------------------------------------------
     // installFailedShown latches on once the user returns from an install
@@ -1173,64 +1177,35 @@ Panel {
                                         color: root.connected ? Color.accent : root.dim
                                     }
                                 }
-                                // Two matched chips on the trailing edge. The hero
-                                // reserves their width itself, so the title never
-                                // collides with them.
+                                // Three lightweight segments (status + auto-sync /
+                                // language). No surrounding frame — just hover
+                                // highlights so the corner stays airy.
                                 trailingControl: Component {
-                                    // One bordered group for status + auto-sync/
-                                    // language, instead of three adjacent pill
-                                    // borders. Interactive segments highlight on
-                                    // hover; dividers separate them.
-                                    BorderSurface {
-                                        id: heroGroup
+                                    Row {
                                         anchors.verticalCenter: parent.verticalCenter
-                                        implicitHeight: Style.space(28)
-                                        implicitWidth: heroGroupRow.implicitWidth + Style.space(4)
-                                        radius: Style.cornerRadius
-                                        color: "transparent"
-                                        borderSpec: Border.controlSpec("normal", root.fg, Color.accent)
-
-                                        Row {
-                                            id: heroGroupRow
-                                            anchors.centerIn: parent
-                                            spacing: 0
-
-                                            HeroChip {
-                                                label: root.heroStatusText()
-                                                showDot: true
-                                                dot: root.heroStatusColor()
-                                            }
-                                            Rectangle {
-                                                visible: heroAutoChip.visible
-                                                width: 1
-                                                height: Style.space(16)
-                                                color: Qt.alpha(root.fg, 0.18)
-                                                anchors.verticalCenter: parent.verticalCenter
-                                            }
-                                            // Auto-sync marker — only while the background
-                                            // timer is armed. Tap opens storage settings.
-                                            HeroChip {
-                                                id: heroAutoChip
-                                                visible: root.widget !== null && root.widget.autoSyncEnabled === true
-                                                label: "\uf021"
-                                                interactive: true
-                                                tooltipText: root.t("autoSyncOn")
-                                                onTapped: root.openStorageModal()
-                                            }
-                                            Rectangle {
-                                                width: 1
-                                                height: Style.space(16)
-                                                color: Qt.alpha(root.fg, 0.18)
-                                                anchors.verticalCenter: parent.verticalCenter
-                                            }
-                                            HeroChip {
-                                                label: root.t("language")
-                                                interactive: true
-                                                tooltipText: root.t("langTip")
-                                                onTapped: {
-                                                    if (root.widget)
-                                                        root.widget.setLang(root.lang === "en" ? "zh" : "en");
-                                                }
+                                        spacing: Style.space(6)
+                                        HeroChip {
+                                            label: root.heroStatusText()
+                                            showDot: true
+                                            dot: root.heroStatusColor()
+                                        }
+                                        // Auto-sync marker — only while the background
+                                        // timer is armed. Tap opens storage settings.
+                                        HeroChip {
+                                            id: heroAutoChip
+                                            visible: root.widget !== null && root.widget.autoSyncEnabled === true
+                                            label: "\uf021"
+                                            interactive: true
+                                            tooltipText: root.t("autoSyncOn")
+                                            onTapped: root.openStorageModal()
+                                        }
+                                        HeroChip {
+                                            label: root.t("language")
+                                            interactive: true
+                                            tooltipText: root.t("langTip")
+                                            onTapped: {
+                                                if (root.widget)
+                                                    root.widget.setLang(root.lang === "en" ? "zh" : "en");
                                             }
                                         }
                                     }
@@ -1241,75 +1216,61 @@ Panel {
                             Item {
                                 id: toolbar
                                 width: parent.width
-                                implicitHeight: Math.max(syncBtn.implicitHeight, quickGroup.implicitHeight)
+                                implicitHeight: Math.max(syncBtn.implicitHeight, quickRow.implicitHeight)
 
+                                // Content-sized primary button (no stretch) so the
+                                // icon commands get the room; the two read as a
+                                // left action + right action pair.
                                 Button {
                                     id: syncBtn
                                     anchors.left: parent.left
-                                    anchors.right: quickGroup.left
-                                    anchors.rightMargin: Style.space(6)
                                     anchors.verticalCenter: parent.verticalCenter
                                     text: root.syncing ? root.t("syncing") : root.t("syncAll")
                                     iconText: root.syncing ? "\uf021" : "\uf0ec"
                                     iconSpinning: root.syncing
-                                    // A border so the wide primary button reads as a
+                                    // A border so the primary button reads as a
                                     // button at rest instead of two empty margins.
                                     bordered: true
+                                    implicitHeight: root.controlH
                                     fontFamily: root.fontFam
                                     enabled: !root.syncing && root.m !== null && !root.actionBusy
                                     onClicked: root.syncAll()
                                 }
 
-                                // One bordered cluster of icon commands so five
-                                // separate boxes don't read as clutter; internal
-                                // dividers separate the actions.
-                                BorderSurface {
-                                    id: quickGroup
-                                    anchors.right: parent.right
-                                    anchors.verticalCenter: parent.verticalCenter
-                                    implicitHeight: Style.space(28)
-                                    implicitWidth: quickRow.implicitWidth + Style.space(4)
-                                    radius: Style.cornerRadius
-                                    color: "transparent"
-                                    borderSpec: Border.controlSpec("normal", root.fg, Color.accent)
-
+                                // Borderless icon commands — one light row, no
+                                // per-button boxes.
                                 Row {
                                     id: quickRow
-                                    anchors.centerIn: parent
-                                    spacing: 0
-
-                                    component QuickDivider: Rectangle {
-                                        width: 1
-                                        height: Style.space(16)
-                                        color: Qt.alpha(root.fg, 0.18)
-                                        anchors.verticalCenter: parent.verticalCenter
-                                    }
+                                    anchors.right: parent.right
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    spacing: Style.space(1)
 
                                     IconButton {
+                                        size: root.controlH
                                         iconText: "\uf067"
                                         tooltipText: root.t("addFile")
                                         foreground: root.fg
                                         fontFamily: root.fontFam
                                         onClicked: root.openAddModal()
                                     }
-                                    QuickDivider {}
                                     IconButton {
+                                        size: root.controlH
                                         iconText: "\uf013"
                                         tooltipText: root.t("storage")
                                         foreground: root.fg
                                         fontFamily: root.fontFam
                                         onClicked: root.openStorageModal()
                                     }
-                                    QuickDivider {}
                                     IconButton {
+                                        size: root.controlH
                                         iconText: "\uf019"
                                         tooltipText: root.t("expConfig")
                                         foreground: root.fg
                                         fontFamily: root.fontFam
                                         onClicked: root.doExportConfig()
                                     }
-                                    QuickDivider {}
                                     IconButton {
+                                        size: root.controlH
                                         iconText: "\uf08e"
                                         tooltipText: root.t("web")
                                         foreground: root.fg
@@ -1319,8 +1280,8 @@ Panel {
                                                 root.widget.openWebUI();
                                         }
                                     }
-                                    QuickDivider {}
                                     IconButton {
+                                        size: root.controlH
                                         iconText: "\uf021"
                                         tooltipText: root.t("refresh")
                                         foreground: root.fg
@@ -1330,7 +1291,6 @@ Panel {
                                                 root.widget.refresh();
                                         }
                                     }
-                                }
                                 }
                             }
 
