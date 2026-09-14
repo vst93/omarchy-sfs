@@ -7,10 +7,11 @@ import "Lib.js" as Lib
 
 // SFS Sync — bar entry point.
 //
-// Bar label: "⇄ synced/total" while connected, "⇄ ···" while locating or
-// starting the backend, "⇄ ×" only when sfs truly cannot be found. Urgent
-// color when any file is conflicting or missing. Left click opens the control
-// panel, middle click opens the SFS web UI, right click forces a refresh.
+// Bar label: just the folder-sync glyph — the synced/total counter lives in
+// the control panel, not on the bar. The glyph turns urgent-red when any file
+// is conflicting or missing, and dims while no backend is connected. Left
+// click opens the control panel, middle click opens the SFS web UI, right
+// click forces a refresh.
 //
 // Backend lifecycle: locate → probe → spawn → connect. "Locate" tries the
 // configured sfsPath, then $PATH, then the usual no-sudo install locations
@@ -83,11 +84,15 @@ BarWidget {
 
     readonly property var tr: ({
             "en": {
+                title: "SFS Synced",
+                notifyAuto: "Auto-sync — %1 up · %2 down · %3 skipped · %4 failed",
                 tooltipReady: "SFS Sync — click for details, right-click to refresh",
                 tooltipOff: "SFS starting — click for details",
                 tooltipMissing: "SFS not found — click for details"
             },
             "zh": {
+                title: "SFS 同步完成",
+                notifyAuto: "自动同步 — 上传 %1 · 下载 %2 · 跳过 %3 · 失败 %4",
                 tooltipReady: "SFS 同步 — 点击查看详情，右键刷新",
                 tooltipOff: "SFS 启动中 — 点击查看详情",
                 tooltipMissing: "未找到 SFS — 点击查看详情"
@@ -175,12 +180,27 @@ BarWidget {
             isAuto: !!isAuto
         }), function (payload, text) {
             root.syncing = false;
-            if (payload && payload.summary)
+            if (payload && payload.summary) {
                 root.lastSync = payload;
+                if (isAuto)
+                    root.notifyAutoSync(payload.summary);
+            }
             root.refresh();
             if (cb)
                 cb(payload, text);
         });
+    }
+
+    // Desktop notification after a background auto-sync, so a headless round
+    // is visible. Only fires when something moved or failed — a poll that
+    // skipped everything stays quiet.
+    function notifyAutoSync(s) {
+        if (!s || !root.bar)
+            return;
+        if (!(s.uploaded > 0 || s.downloaded > 0 || s.failed > 0))
+            return;
+        var body = root.t("notifyAuto").replace("%1", s.uploaded || 0).replace("%2", s.downloaded || 0).replace("%3", s.skipped || 0).replace("%4", s.failed || 0);
+        root.bar.run("notify-send -a " + Lib.shellQuote("SFS Sync") + " " + Lib.shellQuote(root.t("title")) + " " + Lib.shellQuote(body));
     }
 
     function syncSingle(id, syncType, cb) {
@@ -458,7 +478,10 @@ BarWidget {
 
     // ---- Polling ---------------------------------------------------------------
     // When autoSync is enabled (set via the panel / SFS settings) each poll
-    // runs a full smart sync instead of a plain refresh.
+    // runs a full smart sync instead of a plain refresh. SFS itself has no
+    // background scheduler — the web UI runs the same 60s countdown in the
+    // page — so this timer is what makes auto-sync actually happen when the
+    // UI is closed.
     property bool autoSyncEnabled: false
     Timer {
         interval: Math.max(10, root.pollSec) * 1000
@@ -607,26 +630,15 @@ BarWidget {
         anchors.fill: parent
         bar: root.bar
         iconComponent: Component {
+            // A plain Item, so BarIconButton's Loader (anchors.fill over its
+            // optical canvas) resizes it to the full slot and the glyph can be
+            // centred. Returning SfsIcon directly keeps its own 15px width and
+            // would pin the icon to the canvas' top-left corner.
             Item {
-                implicitWidth: icon.implicitWidth + (counter.visible ? counter.implicitWidth + Style.space(2) : 0)
-                implicitHeight: Math.max(icon.implicitHeight, counter.visible ? counter.implicitHeight : 0)
                 SfsIcon {
-                    id: icon
-                    anchors.left: parent.left
-                    anchors.verticalCenter: parent.verticalCenter
-                    iconSize: Style.space(13)
+                    anchors.centerIn: parent
+                    iconSize: Style.space(15)
                     color: iconColor
-                }
-                Text {
-                    id: counter
-                    anchors.left: icon.right
-                    anchors.leftMargin: Style.space(2)
-                    anchors.verticalCenter: parent.verticalCenter
-                    visible: root.ready
-                    text: root.matched + "/" + root.total
-                    color: iconColor
-                    font.family: root.bar ? root.bar.fontFamily : Style.font.family
-                    font.pixelSize: Style.font.caption
                 }
             }
         }

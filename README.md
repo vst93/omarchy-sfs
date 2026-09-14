@@ -8,15 +8,19 @@ A native [Omarchy](https://omarchy.org) bar plugin for [SFS (SmallFileSync)](htt
 
 ## Features
 
-- **Bar widget** — a flat folder-sync icon (Lucide) with a `synced/total` counter that turns **urgent-red** when any file has a conflict or is missing locally
-- **Control panel** — a scrollable file list with per-file status, size, last-sync time, and local path
-- **Per-file actions** — every row keeps its primary sync action and edit control visible; edit a row to bind/unbind the local dir, edit the note, copy the path, or delete the record (with confirmation)
-- **Responsive controls** — the panel and every form dialog scroll on short screens; Escape closes the active dialog before closing the panel
+- **Bar widget** — a compact sync-ring glyph that turns **urgent-red** when any file has a conflict or is missing locally (the counts live in the panel, not on the bar)
+- **Compact control panel** — one primary **Sync all** button plus a single row of icon commands (add / storage / export / web / refresh); no wasted space on tiles
+- **Status filter** — a compact dropdown next to the list header (All / Linked / Unlinked / Pending) with live counts, plus an optional free-text filter
+- **File list** — attention-first ordering (conflicts and missing files float to the top); each row shows status, size, age and note; the list scrolls and claims the leftover panel height
+- **Per-file actions** — each row has a single **Edit** control (plus clicking the row); one **Save** in the dialog writes the note and, when you changed it, rebinds the local dir. Copy the path, unbind, or delete the record from the same dialog (delete asks for confirmation)
+- **Keyboard driven** — `j`/`k` or ↑/↓ move a row cursor, `Enter` opens edit, `x` deletes, `f` filters, and `s`/`a`/`r`/`w`/`e` run sync / add / refresh / web / export
+- **Responsive dialogs** — every dialog shares one card shell (scrim, title, close button, scrolling body) and closes on `Esc` or outside click
 - **Sync all** — one click, with a localized outcome line (uploaded / downloaded / skipped / failed)
-- **Storage settings** — read and set the WebDAV endpoint, username, password, and remote base dir, test the connection, and toggle auto-sync
+- **Storage settings** — read and set the WebDAV endpoint, username, password, and remote base dir, test the connection, and toggle auto-sync (actions sit under the form; a ⇄ marker appears in the header while auto-sync is on)
 - **Add file** — add a sync entry from the bar (path + optional note)
-- **Export** — copy the storage config (or, on right-click, the file list) as JSON to the clipboard
+- **Share config** — copy an `sfs --import-config <base64>` command (same format the SFS app shares) so another machine can import your WebDAV settings, credentials and all
 - **Web UI shortcut** — middle-click the bar widget (or the panel button) to open the full SFS web interface
+- **Assisted install** — if `sfs` is missing the panel offers a one-click install that runs SFS's official script in a terminal (you confirm first)
 - **Auto backend** — starts `sfs web` on demand, reuses a server that is already running, suppresses the automatic browser popup, and reconnects on its own after crashes or restarts
 - **Bilingual** — English by default, 中文 with one click (persisted in your Omarchy config)
 - **Theme-native** — every color, font, and spacing token comes from your Omarchy theme (`Color.*` / `Style.*`), so it looks right in any theme
@@ -49,14 +53,22 @@ Omarchy plugins are plain QML folders with no install hooks, so SFS cannot be pu
 |---|---|
 | Left-click the widget | Open the control panel |
 | Click **Sync all** | Full sync (smart: uploads local changes, downloads cloud changes, skips identical) |
-| Click **Add file** | Add a sync entry (path + optional note) |
-| Click **Storage** | Open WebDAV settings, test the connection, toggle auto-sync |
-| Click **Export** | Copy the storage config to clipboard (right-click = export file list) |
-| Use a file row's action controls | Primary action for its state (↑ upload / ↓ download / pull); ✎ opens edit (dir / note / copy / delete) |
+| Click the **+** action | Add a sync entry (path + optional note) |
+| Click the **gear** action | Open WebDAV settings, test the connection, toggle auto-sync |
+| Click the **export** action | Copy the `sfs --import-config …` share command to the clipboard |
+| Click the **external-link** action | Open the SFS web UI |
+| Click the **refresh** action | Force a status refresh |
+| Use the **status dropdown** | Filter the list: All / Linked / Unlinked / Pending (with counts) |
+| Click the **filter** action | Show a free-text field for name / path / note |
+| Click a row or its ✎ | Open the edit dialog: bind/unbind the local dir, edit the note, copy the path, delete the record — one **Save** commits the note and any dir change |
 | Middle-click the widget | Open the SFS web UI in your browser |
 | Right-click the widget | Force a status refresh |
 | **中文 / English** button | Switch language (persisted) |
-| `Esc` | Close the active dialog, or the panel when no dialog is open |
+| `Esc` | Close the active dialog (or clear the filter), then the panel |
+| `j` / `k`, ↑ / ↓ | Move the row cursor |
+| `Enter` | Open the selected row's edit dialog |
+| `x` | Delete the selected record (with confirmation) |
+| `s` / `a` / `r` / `w` / `e` / `f` | Sync all / add file / refresh / web UI / export / filter |
 
 ### Configuration
 
@@ -89,7 +101,7 @@ The plugin never edits your SFS settings or data — removing it leaves SFS exac
 
 ## Privacy & security
 
-The backend binds to `127.0.0.1` only, and the plugin talks to it with plain local HTTP. Credentials are only held in the panel while editing and are sent to the local SFS API; exported config intentionally omits the password.
+The backend binds to `127.0.0.1` only, and the plugin talks to it with plain local HTTP. Credentials are only held in the panel while editing and are sent to the local SFS API. The Share command intentionally includes the password (it is the same `sfs --import-config` blob the SFS app itself shares), so treat it as a secret.
 
 ## License
 
@@ -103,18 +115,45 @@ The backend binds to `127.0.0.1` only, and the plugin talks to it with plain loc
 
 ### 功能
 
-- **栏组件** — 扁平 folder-sync 图标（Lucide 风格）+ `已同步/总数` 计数；出现冲突或文件缺失时变红
-- **控制面板** — 滚动的文件列表，显示每个文件的状态、大小、最近同步时间与本地路径
-- **单文件操作** — 每行常驻主操作与编辑按钮（上传/下载/拉取）；编辑后可设置目录、备注、复制路径或删除（带确认）
-- **响应式交互** — 面板和所有表单弹窗在小屏上可滚动；按 Esc 先关闭当前弹窗，再关闭面板
+- **栏组件** — 简洁的同步环图标；出现冲突或文件缺失时变红（计数移到面板里，状态栏只保留图标）
+- **紧凑控制面板** — 一个主操作 **全部同步** 按钮 + 一行图标命令（添加 / 存储 / 分享 / 网页 / 刷新），不再用大块按钮平铺浪费空间
+- **状态筛选** — 列表标题旁的紧凑下拉（全部 / 已关联 / 未关联 / 待同步）并显示各自数量，另可按需展开关键词筛选
+- **文件列表** — 需要处理的条目优先排前（冲突、缺失置顶）；每行显示状态、大小、时间与备注；列表自动占满剩余高度
+- **单文件操作** — 每行只有一个 **编辑** 按钮（点击整行同样进入编辑）；弹窗里一个 **保存** 同时提交备注与（如已修改的）本地目录，并可复制路径、解除关联或删除（删除带确认）
+- **键盘操作** — `j`/`k` 或 ↑/↓ 移动行光标，`Enter` 编辑，`x` 删除，`f` 筛选，`s`/`a`/`r`/`w`/`e` 分别执行同步/添加/刷新/网页/导出
+- **响应式弹窗** — 所有弹窗共用同一张卡片外壳（遮罩、标题、关闭按钮、可滚动内容），Esc 或点击外部即可关闭
 - **全部同步** — 一键全量同步，并显示结果统计（上传/下载/跳过/失败）
-- **存储设置** — 在面板直接查看/配置 WebDAV 地址/用户名/密码/远端目录、测试连接、自动同步开关
+- **存储设置** — 在面板直接查看/配置 WebDAV 地址/用户名/密码/远端目录、测试连接、自动同步开关（操作按钮放在表单下方；开启自动同步后标题栏会出现 ⇄ 标记）
 - **添加文件** — 面板直接添加待同步条目（路径 + 可选备注）
-- **导出** — 一键把存储配置（或文件清单）以 JSON 复制到剪贴板
+- **分享配置** — 一键复制 `sfs --import-config <base64>` 导入命令（与 SFS 应用一致的格式），另一台机器可直接导入 WebDAV 设置与凭据
 - **网页界面** — 中键点击栏组件直接打开 SFS Web UI
+- **辅助安装** — 找不到 `sfs` 时，面板提供一键安装：确认后在终端运行 SFS 官方安装脚本
 - **自动后端** — 按需启动 `sfs web`，复用已在运行的实例，自动屏蔽 SFS 的浏览器弹窗，崩溃或重启后自动重连
 - **中英双语** — 默认英文，面板内一键切换中文（设置持久化到 Omarchy 配置）
 - **跟随主题** — 所有颜色、字体、间距均取自 Omarchy 主题 token，任何主题下都原生协调
+
+### 用法
+
+| 操作 | 结果 |
+|---|---|
+| 左键点击栏图标 | 打开控制面板 |
+| 点击 **全部同步** | 全量同步（智能：上传本地改动、下载云端改动、跳过相同项） |
+| 点击 **+** | 添加同步条目（路径 + 可选备注） |
+| 点击 **齿轮** | 打开 WebDAV 设置，测试连接，自动同步开关 |
+| 点击 **分享** | 复制 `sfs --import-config …` 导入命令到剪贴板 |
+| 点击 **外链** | 打开 SFS 网页界面 |
+| 点击 **刷新** | 强制刷新状态 |
+| 使用 **状态下拉** | 按 全部 / 已关联 / 未关联 / 待同步 过滤列表（带数量） |
+| 点击 **漏斗** | 展开关键词筛选（名称 / 路径 / 备注） |
+| 点击整行或 ✎ | 打开编辑弹窗：绑定/解除本地目录、编辑备注、复制路径、删除记录；一个 **保存** 同时提交备注与目录改动 |
+| 中键点击栏图标 | 在浏览器打开 SFS 网页界面 |
+| 右键点击栏图标 | 强制刷新状态 |
+| **中文 / English** 按钮 | 切换语言（已持久化） |
+| `Esc` | 关闭当前弹窗（或清空筛选），再关闭面板 |
+| `j` / `k`、↑ / ↓ | 移动行光标 |
+| `Enter` | 打开所选行的编辑弹窗 |
+| `x` | 删除所选记录（带确认） |
+| `s` / `a` / `r` / `w` / `e` / `f` | 全部同步 / 添加 / 刷新 / 网页 / 导出 / 筛选 |
 
 ### 安装
 
