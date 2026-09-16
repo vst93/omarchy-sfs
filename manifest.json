@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "io.github.vst93.sfs",
   "name": "SFS Sync",
-  "version": "1.2.3",
+  "version": "1.2.4",
   "author": "vst93",
   "license": "MIT",
   "description": "WebDAV file-sync status in the Omarchy bar: sync, upload, download, and manage SFS entries from a compact panel.",

@@ -12,7 +12,7 @@
 # release, so SFS version bumps never require touching this pin.
 #
 # Usage:
-#   scripts/update-install-pin.sh [REF]
+#   scripts/update-sfs-pin.sh [REF]
 #
 # REF may be a branch, tag, or full commit SHA (default: main). The resolved
 # commit is what gets pinned; the checksum then binds the exact bytes, so even

@@ -60,7 +60,7 @@ The plugin never edits your SFS settings or data.
 
 The backend binds to `127.0.0.1` only, and credentials are sent only to the local SFS API. The share command intentionally embeds the password (it is the same `sfs --import-config` blob the SFS app itself shares) — treat it as a secret.
 
-The assisted SFS install never executes code from a moving branch: `cmd/install.sh` is fetched from the immutable commit `1dbc14c876f2adea320dbb132cdcd185d1f0909b` and must match the SHA-256 committed in `Lib.js` (`9fda60e3…50a5d9`) before it is run. A failed download, a missing SHA-256 tool, or a digest mismatch aborts with a non-zero exit and no execution. The pinned installer still fetches the **latest SFS release** at run time, so SFS version bumps need no plugin update; only a change to SFS's own `install.sh` requires re-pinning (run `scripts/update-install-pin.sh` and ship the new plugin commit for review).
+The assisted SFS install never executes code from a moving branch: `cmd/install.sh` is fetched from the immutable commit `1dbc14c876f2adea320dbb132cdcd185d1f0909b` and must match the SHA-256 committed in `Lib.js` (`9fda60e3…50a5d9`) before it is run. A failed download, a missing SHA-256 tool, or a digest mismatch aborts with a non-zero exit and no execution. The pinned installer still fetches the **latest SFS release** at run time, so SFS version bumps need no plugin update; only a change to SFS's own `install.sh` requires re-pinning (run `scripts/update-sfs-pin.sh` and ship the new plugin commit for review).
 
 ## License
 
@@ -123,7 +123,7 @@ omarchy plugin remove io.github.vst93.sfs
 
 后端仅绑定 `127.0.0.1`，凭据只发往本地 SFS API。分享命令内嵌密码（与 SFS 应用的分享格式一致），请当作机密保管。
 
-安装 SFS 时不会执行可变分支上的代码：`cmd/install.sh` 取自不可变提交 `1dbc14c876f2adea320dbb132cdcd185d1f0909b`，且必须与 `Lib.js` 中提交的 SHA-256（`9fda60e3…50a5d9`）完全一致才会运行；下载失败、缺少 SHA-256 工具或校验不符都会非零退出且不执行。固定的只是安装器本身，它在运行时仍会拉取 **SFS 最新版本**，因此 SFS 发新版无需更新插件；只有当 SFS 自己的 `install.sh` 变更时才需要重新固定（运行 `scripts/update-install-pin.sh` 并提交新的插件 commit 送审）。
+安装 SFS 时不会执行可变分支上的代码：`cmd/install.sh` 取自不可变提交 `1dbc14c876f2adea320dbb132cdcd185d1f0909b`，且必须与 `Lib.js` 中提交的 SHA-256（`9fda60e3…50a5d9`）完全一致才会运行；下载失败、缺少 SHA-256 工具或校验不符都会非零退出且不执行。固定的只是安装器本身，它在运行时仍会拉取 **SFS 最新版本**，因此 SFS 发新版无需更新插件；只有当 SFS 自己的 `install.sh` 变更时才需要重新固定（运行 `scripts/update-sfs-pin.sh` 并提交新的插件 commit 送审）。
 
 ## 许可
 
