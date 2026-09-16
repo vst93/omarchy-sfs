@@ -146,6 +146,36 @@ def check_qml(name: str) -> dict:
     return {"text": text}
 
 
+def check_supply_chain() -> None:
+    """Reject remotely executed installers that are not pinned + verified.
+
+    Any URL that points at a mutable VCS branch (e.g. raw.githubusercontent.com
+    /.../main/... or /master/...) may change after marketplace review, which the
+    reviewers reject. The assisted install must reference an immutable commit and
+    check a committed SHA-256 before execution.
+    """
+    mutable = re.compile(r"raw\.githubusercontent\.com/[^\s\"']+/(main|master)/")
+    for name in ("Panel.qml", "BarWidget.qml", "Lib.js"):
+        path = ROOT / name
+        if not path.is_file():
+            continue
+        text = path.read_text(encoding="utf-8")
+        if mutable.search(text):
+            err(f"{name}: executes/downloads a script from a mutable branch (pin a commit SHA)")
+    lib = (ROOT / "Lib.js").read_text(encoding="utf-8")
+    if "installScript" in lib:
+        m = re.search(r'SFS_INSTALL_SHA256\s*=\s*"([0-9a-fA-F]{64})"', lib)
+        if not m:
+            err("Lib.js: pinned installer is missing a 64-hex SFS_INSTALL_SHA256")
+        if not re.search(r'SFS_INSTALL_COMMIT\s*=\s*"[0-9a-fA-F]{40}"', lib):
+            err("Lib.js: pinned installer is missing a 40-hex SFS_INSTALL_COMMIT")
+        # The digest in the script must be the one committed in the file.
+        if m and m.group(1) not in lib:
+            err("Lib.js: SFS_INSTALL_SHA256 is not referenced by the install script")
+        if "sha256sum" not in lib or "shasum" not in lib:
+            err("Lib.js: install script must verify the digest before execution")
+
+
 def check_qml_consistency(files: dict) -> None:
     bw = files.get("BarWidget.qml", {}).get("text", "")
     panel = files.get("Panel.qml", {}).get("text", "")
@@ -211,6 +241,7 @@ def main() -> int:
         files = {n: check_qml(n) for n in ("BarWidget.qml", "Panel.qml")}
         check_qml_consistency(files)
         check_lib_js()
+        check_supply_chain()
         check_readme(m)
     if warnings:
         print("Warnings:")

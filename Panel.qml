@@ -52,10 +52,15 @@ Panel {
     property bool installConfirmOpen: false
     property bool installFailedShown: false
 
+    // Pinned to an immutable commit and verified against a digest committed in
+    // Lib.js before anything runs — see Lib.installScript(). The dialog below
+    // shows the same pin so the confirmation is bound to the reviewed code.
+    readonly property string installCommit: Lib.SFS_INSTALL_COMMIT
+    readonly property string installCommitShort: Lib.SFS_INSTALL_COMMIT.substring(0, 12)
+
     function launchInstall() {
-        var sh = ["curl -fsSL https://raw.githubusercontent.com/vst93/sfs/main/cmd/install.sh -o /tmp/sfs-install.sh", "&& sh /tmp/sfs-install.sh", "; echo", "; read -n 1 -s -r -p '" + (root.lang === "zh" ? "按任意键关闭…" : "Press any key to close…") + "'"].join(" ");
         if (root.bar)
-            root.bar.run("omarchy-launch-tui sh -c " + Lib.shellQuote(sh));
+            root.bar.run("omarchy-launch-tui sh -c " + Lib.shellQuote(Lib.installScript(root.lang)));
         // No callback when the terminal closes — show the hint and let the
         // heartbeat or "Search again" recover.
         root.installFailedShown = true;
@@ -204,9 +209,9 @@ Panel {
                 notInstalled: "SFS not found",
                 retrying: "Looking for SFS…",
                 installTitle: "SFS is not installed yet.",
-                installBody: "Install the SFS command line tool, then retry. The plugin opens a terminal and runs SFS's official install script.",
+                installBody: "Install the SFS command line tool, then retry. The plugin downloads SFS's official install script from a pinned commit and verifies it before running it in a terminal.",
                 installBtn: "Install SFS…",
-                installConfirm: "Run the SFS install script in a terminal?",
+                installConfirm: "Download SFS's install script from commit %1, verify its SHA-256, then run it in a terminal?".replace("%1", root.installCommitShort),
                 installNow: "Install",
                 installLater: "Not now",
                 retryBtn: "Search again",
@@ -286,9 +291,9 @@ Panel {
                 notInstalled: "未找到 SFS",
                 retrying: "正在查找 SFS…",
                 installTitle: "尚未安装 SFS。",
-                installBody: "需要先安装 SFS 命令行工具。点击下面的按钮会打开终端并运行 SFS 官方安装脚本。",
+                installBody: "需要先安装 SFS 命令行工具。插件会从固定提交下载 SFS 官方安装脚本并校验 SHA-256，通过后才在终端中运行。",
                 installBtn: "安装 SFS…",
-                installConfirm: "在终端中运行 SFS 官方安装脚本？",
+                installConfirm: "从固定提交 %1 下载 SFS 安装脚本，校验 SHA-256 后在终端运行？".replace("%1", root.installCommitShort),
                 installNow: "安装",
                 installLater: "暂不",
                 retryBtn: "重新查找",
@@ -1320,8 +1325,9 @@ Panel {
                                 visible: showNotFound || showState || showEmpty
 
                                 // "SFS not found" page: explanation + assisted install
-                                // + manual retry. The install runs SFS's official
-                                // install.sh in a user-facing terminal after confirm.
+                                // + manual retry. The install downloads SFS's
+                                // install.sh from a pinned commit and verifies
+                                // its SHA-256 before running it in a terminal.
                                 Column {
                                     id: notFoundBox
                                     width: parent.width

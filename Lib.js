@@ -82,6 +82,40 @@ function portFromLine(line) {
     return m ? parseInt(m[1], 10) : 0
 }
 
+// ---- Assisted install (pinned + verified) ----------------------------------
+// The installer is fetched from an *immutable* commit, never from a branch, and
+// its bytes are checked against SFS_INSTALL_SHA256 — a digest committed here as
+// part of the plugin SHA that Omarchy reviewed. The helper script exits
+// non-zero (and never executes the payload) if the download fails, if no
+// SHA-256 tool is present, or if the digest does not match exactly. That means
+// upstream cannot change what this plugin runs without a new plugin review.
+var SFS_INSTALL_COMMIT = "1dbc14c876f2adea320dbb132cdcd185d1f0909b"
+var SFS_INSTALL_SHA256 = "9fda60e37b10a5c57cf851431a306b759af912776fddcab46d424f31f150a5d9"
+var SFS_INSTALL_URL = "https://raw.githubusercontent.com/vst93/sfs/" + SFS_INSTALL_COMMIT + "/cmd/install.sh"
+
+// Full POSIX shell script (run via `sh -c`): download → verify → execute, or
+// abort. `set -eu` plus an explicit early exit on every failure path makes the
+// verify-before-run ordering impossible to skip.
+function installScript(lang) {
+    var q = shellQuote
+    var prompt = lang === "zh" ? "\u6309\u4EFB\u610F\u952E\u5173\u95ED\u2026" : "Press any key to close\u2026"
+    var s = "set -eu; "
+    s += "t=$(mktemp) || exit 1; "
+    s += "trap 'rm -f \"$t\"' EXIT HUP INT TERM; "
+    s += "if ! curl -fsSL --proto '=https' --tlsv1.2 -o \"$t\" " + q(SFS_INSTALL_URL) + "; then "
+    s += "printf '%s\\n' " + q("Download failed \u2014 nothing was executed.") + " >&2; exit 1; fi; "
+    s += "if command -v sha256sum >/dev/null 2>&1; then a=$(sha256sum \"$t\" | awk '{print $1}'); "
+    s += "elif command -v shasum >/dev/null 2>&1; then a=$(shasum -a 256 \"$t\" | awk '{print $1}'); "
+    s += "else printf '%s\\n' " + q("No SHA-256 tool available \u2014 refusing to run the install script.") + " >&2; exit 1; fi; "
+    s += "if [ \"$a\" != " + q(SFS_INSTALL_SHA256) + " ]; then "
+    s += "printf '%s\\n' " + q("Checksum mismatch \u2014 refusing to run the install script.") + " >&2; "
+    s += "printf '%s\\n' " + q("expected " + SFS_INSTALL_SHA256) + " >&2; "
+    s += "printf '%s\\n' \"actual   $a\" >&2; exit 1; fi; "
+    s += "sh \"$t\"; "
+    s += "printf '\\n'; read -n 1 -s -r -p " + q(prompt)
+    return s
+}
+
 // ---- Status metadata -------------------------------------------------------
 // One entry per status key the SFS API emits (web server `buildFileListItem`
 // and the TUI's `computeFileStateUncached`). `tone` selects a theme color role
